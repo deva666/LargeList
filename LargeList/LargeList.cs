@@ -2,20 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MarkoDevcic
 {
-    /// <summary>
-    /// IList implementations that avoids Large Object Heap allocations
-    /// Currently objects larger than 85.000 bytes are allocated on the LOH, which is never compacted during GC. 
-    /// This can cause memory fragmentation and holes in the heap. 
-    /// OutOfMemory Exceptions can be thrown even if requested allocation is available in the address space.
-    /// Lists are backed by arrays and any list larger than 10.000 items is gonna have it's backing array allocated on the LOH.
-    /// Class is implemented in a way that it holds its items in List of arrays, of which each one has max size of 2^13 items, so each array sits in regular, GC compacted Heap.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
     [DebuggerDisplay("Count = {Count}")]
     [Serializable]
     public class LargeList<T> : IList<T>
