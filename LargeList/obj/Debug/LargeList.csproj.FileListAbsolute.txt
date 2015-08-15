@@ -1,5 +1,0 @@
-C:\Users\Marko\Documents\Repos\LargeList\LargeList\bin\Debug\LargeList.dll
-C:\Users\Marko\Documents\Repos\LargeList\LargeList\bin\Debug\LargeList.pdb
-C:\Users\Marko\Documents\Repos\LargeList\LargeList\obj\Debug\LargeList.csprojResolveAssemblyReference.cache
-C:\Users\Marko\Documents\Repos\LargeList\LargeList\obj\Debug\LargeList.dll
-C:\Users\Marko\Documents\Repos\LargeList\LargeList\obj\Debug\LargeList.pdb

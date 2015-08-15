@@ -1,7 +1,0 @@
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\bin\Debug\LargeListTests.dll
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\bin\Debug\LargeListTests.pdb
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\bin\Debug\LargeList.dll
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\bin\Debug\LargeList.pdb
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\obj\Debug\LargeListTests.csprojResolveAssemblyReference.cache
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\obj\Debug\LargeListTests.dll
-C:\Users\Marko\Documents\Repos\LargeList\LargeListTests\obj\Debug\LargeListTests.pdb
