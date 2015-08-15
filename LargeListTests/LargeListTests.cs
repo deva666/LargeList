@@ -252,7 +252,7 @@ namespace MarkoDevcic.Tests
         [TestMethod]
         public void TestSort()
         {
-            var size = (1 << 16) + 1234;
+            var size = (1 << 14) + 1234;
             var list = new LargeList<Int32>();
             var helperArray = new Int32[size];
             var random = new Random();
@@ -284,6 +284,54 @@ namespace MarkoDevcic.Tests
             Assert.IsFalse(list.Remove(Int32.MaxValue));
         }
 
+        [TestMethod]
+        public void TestInsertRangeInEmptyList()
+        {
+            var list = new LargeList<Int32>();
+            var size = (1 << 14) + 123;
+            var helperArray = new Int32[size];
+
+            for (int i = 0; i < size; i++)
+            {
+                helperArray[i] = i;
+            }
+
+            list.InsertRange(0, helperArray);
+
+            for (int i = 0; i < size; i++)
+            {
+                Assert.AreEqual(helperArray[i], list[i]);
+            }
+        }
+
+        [TestMethod]
+        public void TestInsertRangeWithExistingItems()
+        {
+            var list = new LargeList<Int32>();
+            var size = (1 << 16) + 2222;
+            var oneThird = size / 3;
+            for (int i = 0; i < oneThird; i++)
+            {
+                list.Add(i);
+            }
+            for (int i = 2 * oneThird; i < 3 * oneThird; i++)
+            {
+                list.Add(i);
+            }
+            var helperArray = new Int32[oneThird];
+            for (int i = oneThird; i < 2 * oneThird; i++)
+            {
+                helperArray[i - oneThird] = i;
+            }
+
+            list.InsertRange(oneThird, helperArray);
+
+            for (int i = 0; i < 3 * oneThird; i++)
+            {
+                Assert.AreEqual(list[i], i);
+            }
+        }
+       
         private LargeList<Int32> CreateList(int size)
         {
             var list = new LargeList<Int32>();

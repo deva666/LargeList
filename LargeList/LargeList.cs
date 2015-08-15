@@ -127,16 +127,47 @@ namespace MarkoDevcic
                 throw new ArgumentOutOfRangeException();
 
             var arrayIndex = GetArrayIndex(index);
-            var array = GetDestinationArray(ref arrayIndex);
-            var position = index - arrayIndex * arrayMaxSize;
 
+            EnsureTotalCapacity(arrayIndex);
+
+            var array = arrayHolder[arrayIndex];
+
+            var arraySizeToUpdate = arrayIndex;
+            bool last = false;
+            if (arrayIndex != arrayHolder.Count - 1 && arraySizes[arrayIndex] == arrayMaxSize)
+            {
+                var indexCount = arrayIndex;
+                last = true;
+                var lastItem = array[arraySizes[indexCount] - 1];
+                while (indexCount < arrayHolder.Count - 1)
+                {
+                    var nextIndex = indexCount + 1;
+                    EnsureArrayCapacity(nextIndex);
+                    var nextArray = arrayHolder[nextIndex];
+                    if (arraySizes[nextIndex] > 0)
+                    {
+                        var nextArrayLastItem = nextArray[arraySizes[nextIndex] - 1];
+                        Array.Copy(nextArray, 0, nextArray, 1, arraySizes[nextIndex] == arrayMaxSize ? arraySizes[nextIndex] -1 : arraySizes[nextIndex]);
+                        nextArray[0] = lastItem;
+                        lastItem = nextArrayLastItem;
+                    }
+                    else
+                    {
+                        nextArray[0] = lastItem;
+                    }
+                    indexCount++;
+                }
+                arraySizeToUpdate = indexCount;
+            }
+
+            var position = index - arrayIndex * arrayMaxSize;
             if (position < arraySizes[arrayIndex])
             {
-                Array.Copy(array, position, array, position + 1, arraySizes[arrayIndex] - position);
+                Array.Copy(array, position, array, position + 1, last ? arraySizes[arrayIndex] - position - 1 : arraySizes[arrayIndex] - position);
             }
 
             array[position] = item;
-            arraySizes[arrayIndex]++;
+            arraySizes[arraySizeToUpdate]++;
             size++;
             version++;
         }
@@ -167,11 +198,11 @@ namespace MarkoDevcic
 
                 while (indexCount < arrayHolder.Count - 1)
                 {
-                    var shiftArray = arrayHolder[indexCount];
+                    var currentArray = arrayHolder[indexCount];
                     var nextArrayFirstItem = arrayHolder[indexCount + 1][0];
                     if (indexCount != arrayIndex)
-                        Array.Copy(shiftArray, 1, shiftArray, 0, (arraySizes[indexCount] - 1));
-                    array[arraySizes[indexCount] - 1] = nextArrayFirstItem;
+                        Array.Copy(currentArray, 1, currentArray, 0, (arraySizes[indexCount] - 1));
+                    currentArray[arraySizes[indexCount] - 1] = nextArrayFirstItem;
                     indexCount++;
                 }
                 var lastArrayIndex = arrayHolder.Count - 1;
@@ -231,15 +262,12 @@ namespace MarkoDevcic
             return (Int32)Math.Floor(ratio);
         }
 
-
         private T[] GetDestinationArray(ref Int32 arrayIndex)
         {
             T[] array;
             if (arrayHolder.Count == arrayIndex)
             {
-                array = new T[DEFAULT_ARRAY_SIZE];
-                arrayHolder.Insert(arrayIndex, array);
-                arraySizes.Insert(arrayIndex, 0);
+                array = CreateArrayAtIndex(arrayIndex);
                 return array;
             }
             else
@@ -260,6 +288,31 @@ namespace MarkoDevcic
                 }
                 return array;
             }
+        }
+
+        private void EnsureTotalCapacity(Int32 arrayIndex)
+        {
+            if (size % arrayMaxSize == 0 || arrayHolder.Count == arrayIndex)
+            {
+                CreateArrayAtIndex(arrayHolder.Count);
+            }
+            EnsureArrayCapacity(arrayIndex);
+        }
+
+        private void EnsureArrayCapacity(Int32 arrayIndex)
+        {
+            if (arrayHolder[arrayIndex].Length == arraySizes[arrayIndex])
+            {
+                Resize(arrayIndex);
+            }
+        }
+
+        private T[] CreateArrayAtIndex(Int32 arrayIndex)
+        {
+            var array = new T[DEFAULT_ARRAY_SIZE];
+            arrayHolder.Insert(arrayIndex, array);
+            arraySizes.Insert(arrayIndex, 0);
+            return array;
         }
 
         private Int32 Resize(Int32 arrayindex)
@@ -342,6 +395,21 @@ namespace MarkoDevcic
         public bool IsReadOnly
         {
             get { return false; }
+        }
+
+        public void InsertRange(Int32 index, IEnumerable<T> source)
+        {
+            if (index > size || index < 0)
+                throw new ArgumentOutOfRangeException();
+
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            foreach (var item in source)
+            {
+                Insert(index, item);
+                index++;
+            }
         }
 
         public bool Remove(T item)
