@@ -331,7 +331,24 @@ namespace MarkoDevcic.Tests
                 Assert.AreEqual(list[i], i);
             }
         }
-       
+
+        [TestMethod]
+        public void TestRemoveAndInsert()
+        {
+            var size = (1 << 17) + 123;
+            var list = CreateList(size);
+            list.RemoveAt(0);
+            list.Insert(0, 0);
+
+            list.RemoveAt(size - 1);
+            list.Insert(size - 1, size - 1);
+
+            for (int i = 0; i < size; i++)
+            {
+                Assert.AreEqual(i, list[i]);
+            }
+        }
+
         private LargeList<Int32> CreateList(int size)
         {
             var list = new LargeList<Int32>();

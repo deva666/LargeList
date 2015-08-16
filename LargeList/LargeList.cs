@@ -25,9 +25,17 @@ namespace MarkoDevcic
         {
             if (typeof(T).IsValueType)
             {
-                var typeSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(T));
-                var maxSize = LARGE_HEAP_LIMIT / typeSize;
-                arrayMaxSize = FirstSmallerPowerOf2(maxSize);
+                if (typeof(T) == typeof(Double))
+                {
+                    //CLR alocates arrays of double larger then 1000 on LOH
+                    arrayMaxSize = FirstSmallerPowerOf2(1000);
+                }
+                else
+                {
+                    var typeSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(T));
+                    var maxSize = LARGE_HEAP_LIMIT / typeSize;
+                    arrayMaxSize = FirstSmallerPowerOf2(maxSize);
+                }
             }
             else
             {
@@ -133,11 +141,12 @@ namespace MarkoDevcic
             var array = arrayHolder[arrayIndex];
 
             var arraySizeToUpdate = arrayIndex;
-            bool last = false;
+
+            //inserting to array that is not last means that that array has hit its max size, so we have to make room for the inserted item
+            //we do that by shifting array's last item to the next array's first position, repeating until we hit last array
             if (arrayIndex != arrayHolder.Count - 1 && arraySizes[arrayIndex] == arrayMaxSize)
             {
                 var indexCount = arrayIndex;
-                last = true;
                 var lastItem = array[arraySizes[indexCount] - 1];
                 while (indexCount < arrayHolder.Count - 1)
                 {
@@ -147,7 +156,8 @@ namespace MarkoDevcic
                     if (arraySizes[nextIndex] > 0)
                     {
                         var nextArrayLastItem = nextArray[arraySizes[nextIndex] - 1];
-                        Array.Copy(nextArray, 0, nextArray, 1, arraySizes[nextIndex] == arrayMaxSize ? arraySizes[nextIndex] -1 : arraySizes[nextIndex]);
+                        Array.Copy(nextArray, 0, nextArray, 1,
+                            arraySizes[nextIndex] == arrayMaxSize ? arraySizes[nextIndex] - 1 : arraySizes[nextIndex]);
                         nextArray[0] = lastItem;
                         lastItem = nextArrayLastItem;
                     }
@@ -163,7 +173,8 @@ namespace MarkoDevcic
             var position = index - arrayIndex * arrayMaxSize;
             if (position < arraySizes[arrayIndex])
             {
-                Array.Copy(array, position, array, position + 1, last ? arraySizes[arrayIndex] - position - 1 : arraySizes[arrayIndex] - position);
+                Array.Copy(array, position, array, position + 1,
+                    arraySizes[arrayIndex] == arrayMaxSize ? arraySizes[arrayIndex] - position - 1 : arraySizes[arrayIndex] - position);
             }
 
             array[position] = item;
@@ -180,13 +191,14 @@ namespace MarkoDevcic
             var arrayIndex = GetArrayIndex(index);
             var array = arrayHolder[arrayIndex];
             var position = index - arrayIndex * arrayMaxSize;
-            size--;
 
             if (position < arraySizes[arrayIndex])
             {
                 Array.Copy(array, position + 1, array, position, arraySizes[arrayIndex] - 1 - position);
             }
 
+            //if removing from last array then just insert default item to that position
+            //otherwise, we have to copy each first item from the next array to previous array last position
             if (arrayIndex == arrayHolder.Count - 1)
             {
                 array[arraySizes[arrayIndex]] = default(T);
@@ -201,14 +213,20 @@ namespace MarkoDevcic
                     var currentArray = arrayHolder[indexCount];
                     var nextArrayFirstItem = arrayHolder[indexCount + 1][0];
                     if (indexCount != arrayIndex)
+                    {
                         Array.Copy(currentArray, 1, currentArray, 0, (arraySizes[indexCount] - 1));
+                    }
                     currentArray[arraySizes[indexCount] - 1] = nextArrayFirstItem;
                     indexCount++;
                 }
+
                 var lastArrayIndex = arrayHolder.Count - 1;
                 var lastArray = arrayHolder[lastArrayIndex];
                 Array.Copy(lastArray, 1, lastArray, 0, (arraySizes[lastArrayIndex] - 1));
+                arraySizes[lastArrayIndex]--;
             }
+
+            size--;
             version++;
         }
 
@@ -222,10 +240,6 @@ namespace MarkoDevcic
                 var arrayIndex = GetArrayIndex(index);
                 var position = index - arrayIndex * arrayMaxSize;
                 var array = arrayHolder[arrayIndex];
-
-                if (position >= array.Length)
-                    throw new ArgumentOutOfRangeException();
-
                 return array[position];
             }
             set
@@ -236,10 +250,6 @@ namespace MarkoDevcic
                 var arrayIndex = GetArrayIndex(index);
                 var position = index - arrayIndex * arrayMaxSize;
                 var array = arrayHolder[arrayIndex];
-
-                if (position >= array.Length)
-                    throw new ArgumentOutOfRangeException();
-
                 array[position] = value;
                 version++;
             }
@@ -296,6 +306,7 @@ namespace MarkoDevcic
             {
                 CreateArrayAtIndex(arrayHolder.Count);
             }
+
             EnsureArrayCapacity(arrayIndex);
         }
 
@@ -577,6 +588,5 @@ namespace MarkoDevcic
                 current = default(T);
             }
         }
-
     }
 }
