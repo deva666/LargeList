@@ -17,8 +17,8 @@ namespace MarkoDevcic
         private Int32 size = 0;
         private Int32 version = 0;
 
-        private readonly List<T[]> arrayHolder;
-        private readonly List<Int32> arraySizes;
+        private readonly List<T[]> internalArrays;
+        private readonly List<Int32> internalArraySizes;
 
 
         public LargeList()
@@ -43,8 +43,8 @@ namespace MarkoDevcic
                 arrayMaxSize = FirstSmallerPowerOf2(maxSize);
             }
 
-            arrayHolder = new List<T[]>();
-            arraySizes = new List<Int32>();
+            internalArrays = new List<T[]>();
+            internalArraySizes = new List<Int32>();
         }
 
         public LargeList(Int32 size)
@@ -60,16 +60,16 @@ namespace MarkoDevcic
         {
             while (size >= arrayMaxSize)
             {
-                arrayHolder.Add(new T[arrayMaxSize]);
-                arraySizes.Add(0);
+                internalArrays.Add(new T[arrayMaxSize]);
+                internalArraySizes.Add(0);
                 size -= arrayMaxSize;
             }
             if (size > 0)
             {
                 var lastSize = FirstLargerPowerOf2(size);
                 lastSize = lastSize < DEFAULT_ARRAY_SIZE ? DEFAULT_ARRAY_SIZE : lastSize;
-                arrayHolder.Add(new T[lastSize]);
-                arraySizes.Add(0);
+                internalArrays.Add(new T[lastSize]);
+                internalArraySizes.Add(0);
             }
         }
 
@@ -120,9 +120,9 @@ namespace MarkoDevcic
 
         public int IndexOf(T item)
         {
-            for (int i = 0; i < arrayHolder.Count; i++)
+            for (int i = 0; i < internalArrays.Count; i++)
             {
-                var index = Array.IndexOf(arrayHolder[i], item, 0, arraySizes[i]);
+                var index = Array.IndexOf(internalArrays[i], item, 0, internalArraySizes[i]);
                 if (index >= 0)
                     return index + (i * arrayMaxSize);
             }
@@ -134,30 +134,30 @@ namespace MarkoDevcic
             if (index > size)
                 throw new ArgumentOutOfRangeException();
 
-            var arrayIndex = GetArrayIndex(index);
+            var arrayIndex = GetInternalArrayIndex(index);
 
             EnsureTotalCapacity(arrayIndex);
 
-            var array = arrayHolder[arrayIndex];
+            var array = internalArrays[arrayIndex];
 
             var arraySizeToUpdate = arrayIndex;
 
             //inserting to array that is not last means that that array has hit its max size, so we have to make room for the inserted item
             //we do that by shifting array's last item to the next array's first position, repeating until we hit last array
-            if (arrayIndex != arrayHolder.Count - 1 && arraySizes[arrayIndex] == arrayMaxSize)
+            if (arrayIndex != internalArrays.Count - 1 && internalArraySizes[arrayIndex] == arrayMaxSize)
             {
                 var indexCount = arrayIndex;
-                var lastItem = array[arraySizes[indexCount] - 1];
-                while (indexCount < arrayHolder.Count - 1)
+                var lastItem = array[internalArraySizes[indexCount] - 1];
+                while (indexCount < internalArrays.Count - 1)
                 {
                     var nextIndex = indexCount + 1;
                     EnsureArrayCapacity(nextIndex);
-                    var nextArray = arrayHolder[nextIndex];
-                    if (arraySizes[nextIndex] > 0)
+                    var nextArray = internalArrays[nextIndex];
+                    if (internalArraySizes[nextIndex] > 0)
                     {
-                        var nextArrayLastItem = nextArray[arraySizes[nextIndex] - 1];
+                        var nextArrayLastItem = nextArray[internalArraySizes[nextIndex] - 1];
                         Array.Copy(nextArray, 0, nextArray, 1,
-                            arraySizes[nextIndex] == arrayMaxSize ? arraySizes[nextIndex] - 1 : arraySizes[nextIndex]);
+                            internalArraySizes[nextIndex] == arrayMaxSize ? internalArraySizes[nextIndex] - 1 : internalArraySizes[nextIndex]);
                         nextArray[0] = lastItem;
                         lastItem = nextArrayLastItem;
                     }
@@ -171,14 +171,14 @@ namespace MarkoDevcic
             }
 
             var position = index - arrayIndex * arrayMaxSize;
-            if (position < arraySizes[arrayIndex])
+            if (position < internalArraySizes[arrayIndex])
             {
                 Array.Copy(array, position, array, position + 1,
-                    arraySizes[arrayIndex] == arrayMaxSize ? arraySizes[arrayIndex] - position - 1 : arraySizes[arrayIndex] - position);
+                    internalArraySizes[arrayIndex] == arrayMaxSize ? internalArraySizes[arrayIndex] - position - 1 : internalArraySizes[arrayIndex] - position);
             }
 
             array[position] = item;
-            arraySizes[arraySizeToUpdate]++;
+            internalArraySizes[arraySizeToUpdate]++;
             size++;
             version++;
         }
@@ -188,42 +188,42 @@ namespace MarkoDevcic
             if (index >= size)
                 throw new ArgumentOutOfRangeException();
 
-            var arrayIndex = GetArrayIndex(index);
-            var array = arrayHolder[arrayIndex];
+            var arrayIndex = GetInternalArrayIndex(index);
+            var array = internalArrays[arrayIndex];
             var position = index - arrayIndex * arrayMaxSize;
 
-            if (position < arraySizes[arrayIndex])
+            if (position < internalArraySizes[arrayIndex])
             {
-                Array.Copy(array, position + 1, array, position, arraySizes[arrayIndex] - 1 - position);
+                Array.Copy(array, position + 1, array, position, internalArraySizes[arrayIndex] - 1 - position);
             }
 
             //if removing from last array then just insert default item to that position
             //otherwise, we have to copy each first item from the next array to previous array last position
-            if (arrayIndex == arrayHolder.Count - 1)
+            if (arrayIndex == internalArrays.Count - 1)
             {
-                array[arraySizes[arrayIndex]] = default(T);
-                arraySizes[arrayIndex]--;
+                array[internalArraySizes[arrayIndex]] = default(T);
+                internalArraySizes[arrayIndex]--;
             }
             else
             {
                 var indexCount = arrayIndex;
 
-                while (indexCount < arrayHolder.Count - 1)
+                while (indexCount < internalArrays.Count - 1)
                 {
-                    var currentArray = arrayHolder[indexCount];
-                    var nextArrayFirstItem = arrayHolder[indexCount + 1][0];
+                    var currentArray = internalArrays[indexCount];
+                    var nextArrayFirstItem = internalArrays[indexCount + 1][0];
                     if (indexCount != arrayIndex)
                     {
-                        Array.Copy(currentArray, 1, currentArray, 0, (arraySizes[indexCount] - 1));
+                        Array.Copy(currentArray, 1, currentArray, 0, (internalArraySizes[indexCount] - 1));
                     }
-                    currentArray[arraySizes[indexCount] - 1] = nextArrayFirstItem;
+                    currentArray[internalArraySizes[indexCount] - 1] = nextArrayFirstItem;
                     indexCount++;
                 }
 
-                var lastArrayIndex = arrayHolder.Count - 1;
-                var lastArray = arrayHolder[lastArrayIndex];
-                Array.Copy(lastArray, 1, lastArray, 0, (arraySizes[lastArrayIndex] - 1));
-                arraySizes[lastArrayIndex]--;
+                var lastArrayIndex = internalArrays.Count - 1;
+                var lastArray = internalArrays[lastArrayIndex];
+                Array.Copy(lastArray, 1, lastArray, 0, (internalArraySizes[lastArrayIndex] - 1));
+                internalArraySizes[lastArrayIndex]--;
             }
 
             size--;
@@ -237,9 +237,9 @@ namespace MarkoDevcic
                 if (index >= size)
                     throw new ArgumentOutOfRangeException();
 
-                var arrayIndex = GetArrayIndex(index);
+                var arrayIndex = GetInternalArrayIndex(index);
                 var position = index - arrayIndex * arrayMaxSize;
-                var array = arrayHolder[arrayIndex];
+                var array = internalArrays[arrayIndex];
                 return array[position];
             }
             set
@@ -247,9 +247,9 @@ namespace MarkoDevcic
                 if (index >= size)
                     throw new ArgumentOutOfRangeException();
 
-                var arrayIndex = GetArrayIndex(index);
+                var arrayIndex = GetInternalArrayIndex(index);
                 var position = index - arrayIndex * arrayMaxSize;
-                var array = arrayHolder[arrayIndex];
+                var array = internalArrays[arrayIndex];
                 array[position] = value;
                 version++;
             }
@@ -257,16 +257,16 @@ namespace MarkoDevcic
 
         public void Add(T item)
         {
-            var index = GetArrayIndex(size);
+            var index = GetInternalArrayIndex(size);
             var array = GetDestinationArray(ref index);
-            var position = arraySizes[index];
+            var position = internalArraySizes[index];
             array[position] = item;
-            arraySizes[index]++;
+            internalArraySizes[index]++;
             size++;
             version++;
         }
 
-        private Int32 GetArrayIndex(Int32 index)
+        private Int32 GetInternalArrayIndex(Int32 index)
         {
             var ratio = (double)index / (double)arrayMaxSize;
             return (Int32)Math.Floor(ratio);
@@ -275,20 +275,20 @@ namespace MarkoDevcic
         private T[] GetDestinationArray(ref Int32 arrayIndex)
         {
             T[] array;
-            if (arrayHolder.Count == arrayIndex)
+            if (internalArrays.Count == arrayIndex)
             {
                 array = CreateArrayAtIndex(arrayIndex);
                 return array;
             }
             else
             {
-                array = arrayHolder[arrayIndex];
-                if (array.Length == arraySizes[arrayIndex])
+                array = internalArrays[arrayIndex];
+                if (array.Length == internalArraySizes[arrayIndex])
                 {
                     var resizeIndex = Resize(arrayIndex);
                     if (arrayIndex == resizeIndex)
                     {
-                        array = arrayHolder[arrayIndex];
+                        array = internalArrays[arrayIndex];
                     }
                     else
                     {
@@ -302,9 +302,9 @@ namespace MarkoDevcic
 
         private void EnsureTotalCapacity(Int32 arrayIndex)
         {
-            if (size % arrayMaxSize == 0 || arrayHolder.Count == arrayIndex)
+            if (size % arrayMaxSize == 0 || internalArrays.Count == arrayIndex)
             {
-                CreateArrayAtIndex(arrayHolder.Count);
+                CreateArrayAtIndex(internalArrays.Count);
             }
 
             EnsureArrayCapacity(arrayIndex);
@@ -312,7 +312,7 @@ namespace MarkoDevcic
 
         private void EnsureArrayCapacity(Int32 arrayIndex)
         {
-            if (arrayHolder[arrayIndex].Length == arraySizes[arrayIndex])
+            if (internalArrays[arrayIndex].Length == internalArraySizes[arrayIndex])
             {
                 Resize(arrayIndex);
             }
@@ -321,21 +321,21 @@ namespace MarkoDevcic
         private T[] CreateArrayAtIndex(Int32 arrayIndex)
         {
             var array = new T[DEFAULT_ARRAY_SIZE];
-            arrayHolder.Insert(arrayIndex, array);
-            arraySizes.Insert(arrayIndex, 0);
+            internalArrays.Insert(arrayIndex, array);
+            internalArraySizes.Insert(arrayIndex, 0);
             return array;
         }
 
         private Int32 Resize(Int32 arrayindex)
         {
-            var oldSize = arraySizes[arrayindex];
+            var oldSize = internalArraySizes[arrayindex];
             if (arrayMaxSize >> 1 >= oldSize)
             {
                 var newSize = oldSize << 1;
-                var oldArray = arrayHolder[arrayindex];
+                var oldArray = internalArrays[arrayindex];
                 var newArray = new T[newSize];
                 Array.Copy(oldArray, 0, newArray, 0, oldArray.Length);
-                arrayHolder[arrayindex] = newArray;
+                internalArrays[arrayindex] = newArray;
 
                 return arrayindex;
             }
@@ -347,8 +347,8 @@ namespace MarkoDevcic
 
         public void Clear()
         {
-            arrayHolder.Clear();
-            arraySizes.Clear();
+            internalArrays.Clear();
+            internalArraySizes.Clear();
             size = 0;
             version++;
         }
@@ -356,10 +356,10 @@ namespace MarkoDevcic
         public bool Contains(T item)
         {
             var comparer = EqualityComparer<T>.Default;
-            for (int i = 0; i < arrayHolder.Count; i++)
+            for (int i = 0; i < internalArrays.Count; i++)
             {
-                var array = arrayHolder[i];
-                for (int j = 0; j < arraySizes[i]; j++)
+                var array = internalArrays[i];
+                for (int j = 0; j < internalArraySizes[i]; j++)
                 {
                     if (comparer.Equals(item, array[j]))
                         return true;
@@ -380,18 +380,18 @@ namespace MarkoDevcic
             if (array.Length - arrayIndex < size)
                 throw new IndexOutOfRangeException();
 
-            for (int i = 0; i < arrayHolder.Count; i++)
+            for (int i = 0; i < internalArrays.Count; i++)
             {
-                Array.Copy(arrayHolder[i], 0, array, i * arraySizes[i], arraySizes[i]);
+                Array.Copy(internalArrays[i], 0, array, i * internalArraySizes[i], internalArraySizes[i]);
             }
         }
 
         public void ForEach(Action<T> action)
         {
-            for (int i = 0; i < arrayHolder.Count; i++)
+            for (int i = 0; i < internalArrays.Count; i++)
             {
-                var array = arrayHolder[i];
-                for (int j = 0; j < arraySizes[i]; j++)
+                var array = internalArrays[i];
+                for (int j = 0; j < internalArraySizes[i]; j++)
                 {
                     action(array[j]);
                 }
@@ -436,11 +436,11 @@ namespace MarkoDevcic
 
         public void Reverse()
         {
-            foreach (var array in arrayHolder)
+            foreach (var array in internalArrays)
             {
                 Array.Reverse(array);
             }
-            arrayHolder.Reverse();
+            internalArrays.Reverse();
 
             version++;
         }
