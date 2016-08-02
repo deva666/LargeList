@@ -9,3 +9,10 @@ This can cause memory fragmentation and holes in the heap.
 LargeList is backed by array of arrays. 
 Each array has it's max size property set based on the type it is holding, so it never grows over 85.000 bytes in size. 
 And thus each array sits in regular heap.
+
+
+Written by [Marko Devcic](http://www.markodevcic.com)
+
+### License
+
+[MIT](https://opensource.org/licenses/MIT)
